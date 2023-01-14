@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
+
+/*使用说明，部署ERC20和ERC721合约，调用setERC721和setERC20方法
+完成初始化
+*/
 //质押ERC721得到ERC20
 //可以解除质押
+    //注意但钱包为0时，更新benefit也为0，不然benefitcanget方法会下溢
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -83,10 +88,12 @@ contract Pool {
     }
 
     //查看可以领取的收益
-    function benefitCanGot() public view returns(uint) {
+    function benefitCanGet() public view returns(uint) {
+        if (userPrize() == 0)
+            return 0;
         return userPrize() - benefitHadGet[msg.sender];
     }
-
+    //注意但钱包为0时，更新benefit也为0，不然benefitcanget方法会下溢
     function withdrawstakeERC721(uint tokenId) public {
         require(NFTIsStake[msg.sender][tokenId] = true, "not stake For you");
         getBenefit();//领取ERC20
@@ -94,6 +101,8 @@ contract Pool {
         //profitERC20.transfer(msg.sender,)
         userBalance[msg.sender] -= ONE_ETH;
         count -= ONE_ETH;
+        if (userPrize() == 0)
+            benefitHadGet[msg.sender] = 0;
     }
 
 
