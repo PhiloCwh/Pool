@@ -5,14 +5,12 @@
 1.设置挖矿时间
 2.转入rewardtoken
 3.设置rewardtoken的总数量
+4.质押token
 */
 pragma solidity ^0.8;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-
 contract StakingRewards {
-    //IERC20 public  stakingToken;
-    IERC721 public stakingERC721;
+    IERC20 public  stakingToken;
     IERC20 public  rewardsToken;
 
     address public owner;
@@ -36,16 +34,12 @@ contract StakingRewards {
     uint public totalSupply;
     // User address => staked amount
     mapping(address => uint) public balanceOf;
-    //质押NFT address=>tokenId=>isStakeInContract
-    mapping(address => mapping(uint => bool)) public NFTStakeIndex;
 
-    uint constant ONE_NFT = 10**18;
+    uint starAt;
 
-
-    constructor(address _stakingERC721, address _rewardToken) {
+    constructor(address _stakingToken, address _rewardToken) {
         owner = msg.sender;
-        //stakingToken = IERC20(_stakingToken);
-        stakingERC721 = IERC721(_stakingERC721);
+        stakingToken = IERC20(_stakingToken);
         rewardsToken = IERC20(_rewardToken);
     }
 
@@ -81,29 +75,24 @@ contract StakingRewards {
             totalSupply;
     }
 
-    function resetToken(address _stakingERC721, address _rewardToken) public onlyOwner{
-        stakingERC721 = IERC721(_stakingERC721);
+    function resetToken(address _stakingToken, address _rewardToken) public onlyOwner{
+        stakingToken = IERC20(_stakingToken);
         rewardsToken = IERC20(_rewardToken);
 
     }
 
-    function stake(uint tokenId) external updateReward(msg.sender) {
-        //require(_amount > 0, "amount = 0");
-        require(stakingERC721.ownerOf(tokenId) == msg.sender, "not owner of NFT");
-        //stakingToken.transferFrom(msg.sender, address(this), _amount);
-        stakingERC721.transferFrom(msg.sender, address(this), tokenId);
-        balanceOf[msg.sender] += ONE_NFT;
-        totalSupply += ONE_NFT;
-        NFTStakeIndex[msg.sender][tokenId] = true;//质押NFTindex
+    function stake(uint _amount) external updateReward(msg.sender) {
+        require(_amount > 0, "amount = 0");
+        stakingToken.transferFrom(msg.sender, address(this), _amount);
+        balanceOf[msg.sender] += _amount;
+        totalSupply += _amount;
     }
 
-    function withdraw(uint tokenId) external updateReward(msg.sender) {
-        //require(_amount > 0, "amount = 0");
-        require(NFTStakeIndex[msg.sender][tokenId], "NFT not staking");
-        balanceOf[msg.sender] -= ONE_NFT;
-        totalSupply -= ONE_NFT;
-        //stakingToken.transfer(msg.sender, _amount);
-        stakingERC721.transferFrom(address(this), msg.sender, tokenId);
+    function withdraw(uint _amount) external updateReward(msg.sender) {
+        require(_amount > 0, "amount = 0");
+        balanceOf[msg.sender] -= _amount;
+        totalSupply -= _amount;
+        stakingToken.transfer(msg.sender, _amount);
     }
 
     function earned(address _account) public view returns (uint) {
@@ -111,6 +100,10 @@ contract StakingRewards {
             ((balanceOf[_account] *
                 (rewardPerToken() - userRewardPerTokenPaid[_account])) / 1e18) +
             rewards[_account];
+    }
+
+    function earnedByUser()public view returns (uint) {
+        return earned(msg.sender);
     }
 
     function getReward() external updateReward(msg.sender) {
@@ -144,6 +137,7 @@ contract StakingRewards {
 
         finishAt = block.timestamp + duration;
         updatedAt = block.timestamp;
+        starAt = block.timestamp;
     }
 
     function _min(uint x, uint y) private pure returns (uint) {
@@ -157,6 +151,14 @@ contract StakingRewards {
     function withdrawRewardToken() external onlyOwner {
         require(block.timestamp >= finishAt, "still product rewardToken");
         rewardsToken.transfer(msg.sender, getBalanceOfContract());
+    }
+
+    function leftingTime() external view returns(uint){
+        if((duration + starAt) >= block.timestamp)
+            return duration + starAt - block.timestamp;
+        else 
+            return 0;
+        
     }
 
 }
