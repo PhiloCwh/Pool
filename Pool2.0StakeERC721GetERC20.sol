@@ -160,6 +160,10 @@ contract StakingRewards {
             return 0;
         
     }
+    
+    function earnedByUser()public view returns (uint) {
+        return earned(msg.sender);
+    }
 
 }
 
